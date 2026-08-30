@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Masjid Admin PWA</title>
+  
+  <meta name="theme-color" content="#075b45">
+  <link rel="manifest" href="manifest.json">
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
+  
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { margin: 0; background: #eef5f1; font-family: 'Hind Siliguri', sans-serif; color: #173c2e; }
+    .app { max-width: 480px; min-height: 100vh; margin: 0 auto; background: #f7faf8; position: relative; padding-bottom: 90px; }
+    .top { background: linear-gradient(135deg, #075b45, #0c765a); color: white; padding: 24px 18px; border-radius: 0 0 25px 25px; }
+    .balance { margin-top: 15px; background: rgba(255,255,255,0.15); padding: 12px; border-radius: 12px; }
+    .balance strong { font-size: 26px; display: block; }
+    .content { padding: 16px; }
+    .card { background: white; border-radius: 14px; padding: 14px; margin-bottom: 12px; border: 1px solid #e2ece7; }
+    .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+    .row:last-child { border-bottom: none; }
+    input, select { width: 100%; padding: 12px; margin: 6px 0 12px; border: 1px solid #d7e3dd; border-radius: 8px; font-family: inherit; font-size: 15px; }
+    .btn { width: 100%; background: #075b45; color: white; border: 0; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
+    .btn:disabled { background: #8faea5; cursor: not-allowed; }
+    .bottom { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: white; display: flex; border-top: 1px solid #dfe9e4; z-index: 100; }
+    .navbtn { flex: 1; padding: 10px; border: 0; background: none; font-family: inherit; font-size: 11px; cursor: pointer; color: #666; }
+    .navbtn.active { color: #075b45; font-weight: bold; }
+    .navbtn span { display: block; font-size: 18px; }
+    
+    /* Login Lock Screen Style */
+    .login-box { padding: 30px 20px; text-align: center; margin-top: 40px; }
+    .pin-input { font-size: 24px; text-align: center; letter-spacing: 10px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyc0-Lf19yGFVMhmTGr1YJfQuzpbyHQM2T_uO07cp0YO0F9Lc5b7pAN1XlvSWA59nT6dQ/exec";
+    
+    // 🔒 আপডেট করা পিন কোড
+    const SECRET_PIN = "5359";
+
+    function App() {
+      const [isAuthenticated, setIsAuthenticated] = useState(false);
+      const [pin, setPin] = useState('');
+      const [page, setPage] = useState('home');
+      const [transactions, setTransactions] = useState([]);
+      const [loading, setLoading] = useState(false);
+
+      const handleLogin = () => {
+        if (pin === SECRET_PIN) {
+          setIsAuthenticated(true);
+        } else {
+          alert('ভুল পিন কোড! আবার চেষ্টা করুন।');
+          setPin('');
+        }
+      };
+
+      const fetchData = async () => {
+        setLoading(true);
+        try {
+          let res = await fetch(GOOGLE_SCRIPT_URL);
+          let data = await res.json();
+          if (Array.isArray(data)) {
+            setTransactions(data);
+          }
+        } catch (err) {
+          console.error("ডাটা লোড করতে সমস্যা হয়েছে:", err);
+        }
+        setLoading(false);
+      };
+
+      useEffect(() => {
+        if (isAuthenticated) {
+          fetchData();
+        }
+      }, [isAuthenticated]);
+
+      const incomeTotal = transactions.filter(t => t.type === 'income').reduce((a, b) => a + Number(b.amount || 0), 0);
+      const expenseTotal = transactions.filter(t => t.type === 'expense').reduce((a, b) => a + Number(b.amount || 0), 0);
+
+      if (!isAuthenticated) {
+        return (
+          <div className="app">
+            <header className="top" style={{textAlign:'center'}}>
+              <strong>Masjid Cash Account</strong>
+              <p style={{margin:'5px 0 0', fontSize:'13px', opacity:0.8}}>সিকিউরিটি ভেরিফিকেশন</p>
+            </header>
+            <main className="content">
+              <div className="card login-box">
+                <span style={{fontSize:'40px'}}>🔒</span>
+                <h3>পিন কোড দিন</h3>
+                <p style={{color:'#666', fontSize:'13px'}}>অ্যাপটি ব্যবহার করতে ৪ ডিজিটের পিন দিন</p>
+                <input 
+                  type="password" 
+                  maxLength="4" 
+                  className="pin-input"
+                  value={pin} 
+                  onChange={e => setPin(e.target.value)} 
+                  placeholder="••••" 
+                />
+                <button className="btn" onClick={handleLogin} style={{marginTop:'10px'}}>
+                  আনলক করুন
+                </button>
+              </div>
+            </main>
+          </div>
+        );
+      }
+
+      return (
+        <div className="app">
+          <header className="top">
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+              <strong>Masjid Cash Account</strong>
+              <button onClick={() => setIsAuthenticated(false)} style={{background:'rgba(255,255,255,0.2)', color:'white', border:'0', padding:'4px 8px', borderRadius:'5px', fontSize:'12px'}}>লগআউট 🔒</button>
+            </div>
+            <div className="balance">
+              <small>বর্তমান ক্যাশ জমা (Google Sheet Synced)</small>
+              <strong>৳ {(incomeTotal - expenseTotal).toLocaleString()}</strong>
+            </div>
+          </header>
+
+          <main className="content">
+            {page === 'home' && (
+              <div>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                  <h3>সারসংক্ষেপ</h3>
+                  <button onClick={fetchData} style={{padding:'4px 8px', borderRadius:'5px', border:'1px solid #ccc'}}>🔄 রিফ্রেশ</button>
+                </div>
+                {loading ? <p>ডাটা লোড হচ্ছে...</p> : (
+                  <div className="card">
+                    <div className="row"><span>মোট আয়</span><strong style={{color:'green'}}>৳ {incomeTotal}</strong></div>
+                    <div className="row"><span>মোট ব্যয়</span><strong style={{color:'red'}}>৳ {expenseTotal}</strong></div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {page === 'income' && <IncomeForm onSave={fetchData} />}
+            {page === 'expense' && <ExpenseForm onSave={fetchData} />}
+          </main>
+
+          <nav className="bottom">
+            <button className={`navbtn ${page === 'home' ? 'active' : ''}`} onClick={() => setPage('home')}><span>🏠</span>হোম</button>
+            <button className={`navbtn ${page === 'income' ? 'active' : ''}`} onClick={() => setPage('income')}><span>📥</span>আয় এন্ট্রি</button>
+            <button className={`navbtn ${page === 'expense' ? 'active' : ''}`} onClick={() => setPage('expense')}><span>📤</span>ব্যয় এন্ট্রি</button>
+          </nav>
+        </div>
+      );
+    }
+
+    function IncomeForm({ onSave }) {
+      const [amount, setAmount] = useState('');
+      const [category, setCategory] = useState('মাসিক চাঁদা');
+      const [details, setDetails] = useState('');
+      const [saving, setSaving] = useState(false);
+
+      const submit = async () => {
+        if(!amount) return alert('টাকার পরিমাণ লিখুন!');
+        setSaving(true);
+        try {
+          await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ type: 'income', category, amount, details })
+          });
+          alert('আয় সফলভাবে গুগল শিটে জমা হয়েছে!');
+          setAmount(''); setDetails('');
+          onSave();
+        } catch (e) {
+          alert('সমস্যা হয়েছে, আবার চেষ্টা করুন');
+        }
+        setSaving(false);
+      };
+
+      return (
+        <div className="card">
+          <h3>আয় যোগ করুন</h3>
+          <label>খাত</label>
+          <select value={category} onChange={e => setCategory(e.target.value)}>
+            <option>মাসিক চাঁদা</option>
+            <option>সাপ্তাহিক চাল/নগদ</option>
+            <option>শুক্রবারের অনুদান</option>
+            <option>সবজি/ফল বিক্রি</option>
+            <option>অন্যান্য</option>
+          </select>
+          <label>টাকার পরিমাণ</label>
+          <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" />
+          <label>বিবরণ (কার নাম বা বিষয়)</label>
+          <input value={details} onChange={e => setDetails(e.target.value)} placeholder="বিস্তারিত লিখুন" />
+          <button className="btn" onClick={submit} disabled={saving}>
+            {saving ? 'সেভ হচ্ছে...' : 'গুগল শিটে জমা দিন'}
+          </button>
+        </div>
+      );
+    }
+
+    function ExpenseForm({ onSave }) {
+      const [amount, setAmount] = useState('');
+      const [category, setCategory] = useState('হাদিয়া/বেতন');
+      const [details, setDetails] = useState('');
+      const [saving, setSaving] = useState(false);
+
+      const submit = async () => {
+        if(!amount) return alert('টাকার পরিমাণ লিখুন!');
+        setSaving(true);
+        try {
+          await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ type: 'expense', category, amount, details })
+          });
+          alert('ব্যয় সফলভাবে গুগল শিটে জমা হয়েছে!');
+          setAmount(''); setDetails('');
+          onSave();
+        } catch (e) {
+          alert('সমস্যা হয়েছে, আবার চেষ্টা করুন');
+        }
+        setSaving(false);
+      };
+
+      return (
+        <div className="card">
+          <h3>ব্যয় যোগ করুন</h3>
+          <label>খাত</label>
+          <select value={category} onChange={e => setCategory(e.target.value)}>
+            <option>হাদিয়া/বেতন</option>
+            <option>বিদ্যুৎ বিল</option>
+            <option>মসজিদ মেরামত</option>
+            <option>অন্যান্য</option>
+          </select>
+          <label>টাকার পরিমাণ</label>
+          <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" />
+          <label>বিবরণ</label>
+          <input value={details} onChange={e => setDetails(e.target.value)} placeholder="বিস্তারিত লিখুন" />
+          <button className="btn" style={{background: '#c0392b'}} onClick={submit} disabled={saving}>
+            {saving ? 'সেভ হচ্ছে...' : 'ব্যয় জমা দিন'}
+          </button>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
+</body>
+</html>
