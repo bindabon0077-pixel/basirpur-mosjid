@@ -1,0 +1,15 @@
+{
+  "name": "Masjid Cash Manager",
+  "short_name": "Masjid App",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f7faf8",
+  "theme_color": "#075b45",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2983/2983803.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
